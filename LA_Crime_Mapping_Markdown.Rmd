@@ -9,22 +9,115 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+## Load Packages
+```{r include=FALSE}
+# Load Packages
+library(sf) # simple features spatial data
+library(ggplot2)
+library(dplyr) # to filter dataframes
+library(RColorBrewer) # for diverging colour scheme
+library(tidyverse) # for piping
+#library(maptools)
+#library(mapproj)
 ```
 
-## Including Plots
+## Import the LA Shapefile Data
+```{r}
+#Import LA Shapefile using st_read 
+LA<-st_read("Geo_Vis_2_Data/LA_County_City_Boundaries/LA_County_City_Boundaries.shp",
+            stringsAsFactors=FALSE)
 
-You can also embed plots, for example:
+#Check CRS of the LA shapefile
+#st_crs(LA)  # CRS is WGS 84, EPSG 4326
+#View(LA) #opens the 'attribute' table in the Editor window for viewing
 
-```{r pressure, echo=FALSE}
-plot(pressure)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Import the LA Crime Data
+```{r}
+# https://data.lacity.org/Public-Safety/Crime-Data-from-2020-to-Present/2nrs-mtv8
+# to present is 15/12/21
+LAcrime <- read.csv("Geo_Vis_2_Data/LA_Crime_Data_from_2020_to_Present.csv")
+
+#View the imported dataframe
+# Each observation/row is a crime incident that has occured
+#View(LAcrime)  # Open attribute table, 390,356 obs with 28 variables
+#str(LAcrime) # see datatypes of each column 
+
+```
+
+```{r}
+# Deal with missing coord data in the LAcrime dataframe
+# Select the observations where LON does NOT have 0 values OR LAT does NOT have 0 values
+LAcrime<- LAcrime %>% 
+              filter(LON != 0
+                     | LAT != 0)   # remaining 387,999 obs
+
+```
+
+
+
+## Filter City of LA and plot the boundary
+
+```{r}
+ 
+# Plot only the City of LA boundary from the LA county
+# Use filter from dplyr to select only the City of Los Angeles area
+LA_city <- filter(LA, CITY_LABEL == "Los Angeles")
+```
+```{r}
+# get bounding box coords of LA 
+LA_city.bbox<-st_bbox(LA_city)
+```
+```{r}
+# Plot the City of Los Angeles geometry using ggplot
+ggplot() +
+  geom_sf(data=LA_city) +
+  # Add the crime point data +
+  #geom_point(data=LAcrime, mapping = aes(x=LON, y=LAT), color="red") +
+  geom_hex(data=LAcrime,
+           mapping = aes(x=LON, y=LAT), bins=15, color="black")+
+  #scale_fill_continuous(type = "viridis")
+  scale_fill_fermenter(n.breaks=10,palette = "RdYlBu")
+  
+ # Bounding box used - but not needed as the coords are only in LA
+  #coord_sf(xlim = c(LA_city.bbox$xmin, LA_city.bbox$xmax),
+   #        ylim = c(LA_city.bbox$ymin, LA_city.bbox$ymax))
+
+```
+```{r}
+# Plot the City of Los Angeles geometry using ggplot
+ggplot() +
+  #geom_sf(data=LA_city) +
+  # Add the crime point data +
+  #geom_point(data=LAcrime, mapping = aes(x=LON, y=LAT), color="red") +
+  geom_bin_2d(data=LAcrime,
+           mapping = aes(x=LON, y=LAT))
+  #scale_fill_continuous(type = "viridis")+
+  
+  # Use LA bounding box to exclude the crime incidences with (0,0) missing coord data
+  coord_sf(xlim = c(LA_city.bbox$xmin, LA_city.bbox$xmax),
+           ylim = c(LA_city.bbox$ymin, LA_city.bbox$ymax))
+
+```
+```{r}
+# Plot the City of Los Angeles geometry using ggplot
+ggplot(data=LAcrime, aes(x=LON, y=LAT)) +
+  #geom_sf(data=LA_city) +
+  # Add the crime point data +
+  #geom_point(data=LAcrime, mapping = aes(x=LON, y=LAT), color="red") +
+  geom_density_2d_filled()+
+  
+  # Use LA bounding box to exclude the crime incidences with (0,0) missing coord data
+  coord_sf(xlim = c(LA_city.bbox$xmin, LA_city.bbox$xmax),
+           ylim = c(LA_city.bbox$ymin, LA_city.bbox$ymax))
+
+
+
+
+
+```
+
+
+
+
