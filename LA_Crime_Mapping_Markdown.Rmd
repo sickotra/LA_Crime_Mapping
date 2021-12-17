@@ -17,6 +17,7 @@ library(ggplot2)
 library(dplyr) # to filter dataframes
 library(RColorBrewer) # for diverging colour scheme
 library(tidyverse) # for piping
+library(ggmap) #for getting online basemap
 #library(maptools)
 #library(mapproj)
 ```
@@ -106,18 +107,74 @@ ggplot(data=LAcrime, aes(x=LON, y=LAT)) +
   #geom_sf(data=LA_city) +
   # Add the crime point data +
   #geom_point(data=LAcrime, mapping = aes(x=LON, y=LAT), color="red") +
-  geom_density_2d_filled()+
+  geom_density_2d_filled()
   
   # Use LA bounding box to exclude the crime incidences with (0,0) missing coord data
-  coord_sf(xlim = c(LA_city.bbox$xmin, LA_city.bbox$xmax),
-           ylim = c(LA_city.bbox$ymin, LA_city.bbox$ymax))
+ # coord_sf(xlim = c(LA_city.bbox$xmin, LA_city.bbox$xmax),
+  #         ylim = c(LA_city.bbox$ymin, LA_city.bbox$ymax))
 
 
 
 
 
 ```
+```{r}
+# Plot the City of Los Angeles geometry using ggplot
+ggplot() +
+  geom_sf(data=LA_city) +
+  # Add the crime point data +
+  #geom_point(data=LAcrime, mapping = aes(x=LON, y=LAT), color="red") +
+  geom_density_2d(data=LAcrime,
+           mapping = aes(x=LON, y=LAT))
+  #scale_fill_continuous(type = "viridis")+
+  
+  # Use LA bounding box to exclude the crime incidences with (0,0) missing coord data
+  coord_sf(xlim = c(LA_city.bbox$xmin, LA_city.bbox$xmax),
+           ylim = c(LA_city.bbox$ymin, LA_city.bbox$ymax))
+```
 
+```{r}
+# Plot the City of Los Angeles geometry using ggplot
+ggplot() +
+  geom_sf(data=LA_city) +
+  # Add the crime point data +
+  #geom_point(data=LAcrime, mapping = aes(x=LON, y=LAT), color="red") +
+
+  stat_density_2d(data=LAcrime, geom = "polygon", contour = TRUE,
+                    aes(x=LON, y=LAT, fill = after_stat(level)), colour = "black",
+                    bins = 10) +
+  scale_fill_distiller(palette = "RdYlBu", direction = -1) +
+  theme_classic()
+```
+
+
+
+## TYPE of crime 
+```{r}
+# Understand the crime categories for the incidents
+# Find all unique values for the Crm.Cd.Desc variable
+unique(LAcrime[c("Crm.Cd.Desc")])   # 12 different categories of crime
+```
+
+```{r include=FALSE}
+# Get Basemap from online and use LA_City bounding box to contrain this
+LA_bmap <- get_map(location = c(left = LA_city.bbox[[1]], bottom =LA_city.bbox[[2]], right = LA_city.bbox[[3]], top = LA_city.bbox[[4]]),source="osm")
+```
+
+```{r}
+# ONLY MAPPING SHOPLIFTING
+ggplot() +   #use the LA OSM basemap
+  geom_sf(data=LA_city) +
+  stat_density_2d(data= filter(LAcrime, Crm.Cd.Desc == "SHOPLIFTING - PETTY THEFT ($950 & UNDER)"),
+                  geom = "polygon", contour = TRUE,
+                  aes(x=LON, y=LAT, fill = after_stat(level)), colour = "black",
+                  bins = 10) +
+  scale_fill_distiller(palette = "RdYlBu", direction = -1) +
+  theme_void() # no axis 
+```
+```{r}
+
+```
 
 
 
