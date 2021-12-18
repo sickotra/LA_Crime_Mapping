@@ -26,15 +26,18 @@ library(leaflet)
 ## Import the LA Shapefile Data
 ```{r}
 #Import LA Shapefile using st_read 
-LA<-st_read("Geo_Vis_2_Data/LA_County_City_Boundaries/LA_County_City_Boundaries.shp",
-            stringsAsFactors=FALSE)
+LA<-st_read("Geo_Vis_2_Data/LA_County_City_Boundaries/LA_County_City_Boundaries.shp",            stringsAsFactors=FALSE)
 
 #Check CRS of the LA shapefile
 #st_crs(LA)  # CRS is WGS 84, EPSG 4326
 #View(LA) #opens the 'attribute' table in the Editor window for viewing
 
+#LA_city<-st_read("Geo_Vis_2_Data/City_Boundary/City_Boundary.shp")
+# get bounding box coords of LA 
+#LA_city.bbox<-st_bbox(LA_city)
 
 ```
+
 
 ## Import the LA Crime Data
 ```{r}
@@ -69,8 +72,7 @@ LAcrime<- LAcrime %>%
 LA_city <- filter(LA, CITY_LABEL == "Los Angeles")
 ```
 ```{r}
-# Transform the shapefile to get lat long coords of the the City of LA boundary using correct WGS84 Geographic proj
-LA_city_coords <- st_transform(LA_city, "+proj=longlat +ellps=WGS84 +datum=WGS84")
+#st_geometry_type(LA_city)
 ```
 
 
@@ -88,10 +90,6 @@ ggplot() +
            mapping = aes(x=LON, y=LAT), bins=15, color="black")+
   #scale_fill_continuous(type = "viridis")
   scale_fill_fermenter(n.breaks=10,palette = "RdYlBu")
-  
- # Bounding box used - but not needed as the coords are only in LA
-  #coord_sf(xlim = c(LA_city.bbox$xmin, LA_city.bbox$xmax),
-   #        ylim = c(LA_city.bbox$ymin, LA_city.bbox$ymax))
 
 ```
 ```{r}
@@ -101,12 +99,7 @@ ggplot() +
   # Add the crime point data +
   #geom_point(data=LAcrime, mapping = aes(x=LON, y=LAT), color="red") +
   geom_bin_2d(data=LAcrime,
-           mapping = aes(x=LON, y=LAT))
-  #scale_fill_continuous(type = "viridis")+
-  
-  # Use LA bounding box to exclude the crime incidences with (0,0) missing coord data
-  coord_sf(xlim = c(LA_city.bbox$xmin, LA_city.bbox$xmax),
-           ylim = c(LA_city.bbox$ymin, LA_city.bbox$ymax))
+           mapping = aes(x=LON, y=LAT));
 
 ```
 ```{r}
@@ -116,14 +109,6 @@ ggplot(data=LAcrime, aes(x=LON, y=LAT)) +
   # Add the crime point data +
   #geom_point(data=LAcrime, mapping = aes(x=LON, y=LAT), color="red") +
   geom_density_2d_filled()
-  
-  # Use LA bounding box to exclude the crime incidences with (0,0) missing coord data
- # coord_sf(xlim = c(LA_city.bbox$xmin, LA_city.bbox$xmax),
-  #         ylim = c(LA_city.bbox$ymin, LA_city.bbox$ymax))
-
-
-
-
 
 ```
 ```{r}
@@ -133,12 +118,8 @@ ggplot() +
   # Add the crime point data +
   #geom_point(data=LAcrime, mapping = aes(x=LON, y=LAT), color="red") +
   geom_density_2d(data=LAcrime,
-           mapping = aes(x=LON, y=LAT))
-  #scale_fill_continuous(type = "viridis")+
+           mapping = aes(x=LON, y=LAT));
   
-  # Use LA bounding box to exclude the crime incidences with (0,0) missing coord data
-  coord_sf(xlim = c(LA_city.bbox$xmin, LA_city.bbox$xmax),
-           ylim = c(LA_city.bbox$ymin, LA_city.bbox$ymax))
 ```
 
 ```{r}
@@ -152,7 +133,7 @@ ggplot() +
                     aes(x=LON, y=LAT, fill = after_stat(level)), colour = "black",
                     bins = 10) +
   scale_fill_distiller(palette = "RdYlBu", direction = -1) +
-  theme_classic()
+  theme_classic();
 ```
 
 
@@ -164,34 +145,39 @@ ggplot() +
 unique(LAcrime[c("Crm.Cd.Desc")])   # 12 different categories of crime
 ```
 
+
 ```{r include=FALSE}
 # Get Basemap from online and use LA_City bounding box to contrain this
-LA_bmap <- get_map(location = c(left = LA_city.bbox[[1]], bottom =LA_city.bbox[[2]], right = LA_city.bbox[[3]], top = LA_city.bbox[[4]]),source="osm")
+LA_bmap <- get_map(location = c(left = LA_city.bbox[[1]],
+                                bottom =LA_city.bbox[[2]],
+                                right = LA_city.bbox[[3]],
+                                top = LA_city.bbox[[4]]),
+                   source="osm")
 ```
 
 ```{r}
 # ONLY MAPPING SHOPLIFTING
-ggmap(LA_bmap) +   #use the LA OSM basemap
+map1<- ggmap(LA_bmap) +   #use the LA OSM basemap
   # 2d kernel density estimation and display result with contours - to prevent overplotting of points
-  stat_density_2d(data= filter(LAcrime, Crm.Cd.Desc == "SHOPLIFTING - PETTY THEFT ($950 & UNDER)"),
-                  geom = "polygon",
-                  contour = TRUE,
-                  aes(x=LON, y=LAT,
-                      fill = after_stat(level),
-                      alpha = 0.5),
-                  colour = "blue",
-                  bins = 10) +
-  scale_fill_distiller(palette = "RdYlBu", direction = -1) +
-  coord_sf(xlim = c(LA_city.bbox$xmin, LA_city.bbox$xmax),
-           ylim = c(LA_city.bbox$ymin, LA_city.bbox$ymax))
-  geom_sf(data=LA_city, xlim = c(LA_city.bbox$xmin, LA_city.bbox$xmax),
-           ylim = c(LA_city.bbox$ymin, LA_city.bbox$ymax)) +
-  theme_void() # no axis 
+       stat_density_2d(data= filter(LAcrime, Crm.Cd.Desc == "SHOPLIFTING - PETTY THEFT ($950 & UNDER)"),
+                       geom = "polygon",
+                       contour = TRUE,
+                       aes(x=LON, y=LAT,
+                           fill = after_stat(level)),
+                       alpha = 0.4,
+                       colour = "darkblue",
+                       bins = 6) +
+       scale_fill_distiller(palette = "RdYlBu", direction = -1) +
+      #no axis
+       theme_void() +
+       theme(legend.position = c(0.2, 0.05), 
+          legend.direction = "horizontal")
+
+map1
 ```
 
-## Leaflet Version
 ```{r}
-
+plot(LA_city)
 ```
 
 
