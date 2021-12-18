@@ -1,7 +1,7 @@
 ---
-title: "LA_Crime_Mapping"
+title: "Mapping Crime Incidents in the City of Los Angeles, California"
 author: "Shivani Sickotra"
-date: "17/12/2021"
+date: "December 2021"
 output: html_document
 ---
 
@@ -9,72 +9,65 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Load Packages
-```{r include=FALSE}
-# Load Packages
-library(sf) # simple features spatial data
-library(ggplot2)
-library(dplyr) # to filter dataframes
-library(RColorBrewer) # for diverging colour scheme
-library(tidyverse) # for piping
-library(ggmap)
-library(png) # for inset map
-library(ggpubr) # for multi plots
-library(cowplot) #multiplot
-library(magick) #for adding image
-
+```{r echo=TRUE}
+# Load the required packages
+library(sf) #for spatial data
+library(ggplot2) #for plotting
+library(dplyr) #for data manipulation
+library(RColorBrewer) #for diverging colour scheme
+library(tidyverse) #for piping
+library(ggmap) #for creating maps
+library(png) #for importing inset map image
+library(magick) #for adding inset image
+library(ggpubr) #for multi-plot figures
+library(cowplot) # for multi-plot figures
 ```
 
-## Import the LA Shapefile Data
+## 1) Import LA Boundary and Crime Data
 ```{r}
-#Import LA Shapefile using st_read 
-LA<-st_read("Geo_Vis_2_Data/LA_County_City_Boundaries/LA_County_City_Boundaries.shp",            stringsAsFactors=FALSE)
+# Import the LA Shapefile using st_read 
+LA <- st_read("Geo_Vis_2_Data/LA_County_City_Boundaries/LA_County_City_Boundaries.shp",
+              stringsAsFactors = FALSE)
 
-#Check CRS of the LA shapefile
+# Check CRS of the LA shapefile
 #st_crs(LA)  # CRS is WGS 84, EPSG 4326
-#View(LA) #opens the 'attribute' table in the Editor window for viewing
 
-#LA_city<-st_read("Geo_Vis_2_Data/City_Boundary/City_Boundary.shp")
-# get bounding box coords of LA 
-#LA_city.bbox<-st_bbox(LA_city)
-
+# View attribute table of the LA shapefile
+#View(LA) 
 ```
 
-
-## Import the LA Crime Data
 ```{r}
+# Import the LA Crime Data
 # https://data.lacity.org/Public-Safety/Crime-Data-from-2020-to-Present/2nrs-mtv8
-# to present is 15/12/21
+# Feb 2020 to present (15/12/21)
 LAcrime <- read.csv("Geo_Vis_2_Data/LA_Crime_Data_from_2020_to_Present.csv")
 
-#View the imported dataframe
-# Each observation/row is a crime incident that has occured
-#View(LAcrime)  # Open attribute table, 390,356 obs with 28 variables
+# View the imported dataframe
+# Each observation/row is a crime incident that has occurred
+#View(LAcrime)
 #str(LAcrime) # see datatypes of each column 
-
 ```
 
+## 2 Pre-process the Data
+
+### 2.1 LA Crime Data
 ```{r}
 # Deal with missing coord data in the LAcrime dataframe
 # Select the observations where LON does NOT have 0 values OR LAT does NOT have 0 values
-LAcrime<- LAcrime %>% 
-              filter(LON != 0
-                     | LAT != 0)   # remaining 387,999 obs
-
+LAcrime <- LAcrime %>% filter(LON != 0 | LAT != 0)   # remaining 387,999 obs
 ```
 
-
-
-## Filter City of LA and plot the boundary
-
+## 2.2 City of LA Boundary Data
 ```{r}
- 
-# Plot only the City of LA boundary from the LA county
+# Extract only the City of LA boundary from the LA county
 # Use filter from dplyr to select only the City of Los Angeles area
 LA_city <- filter(LA, CITY_LABEL == "Los Angeles")
+
+# View the geometry type of the shapefile
+#st_geometry_type(LA_city)
 ```
 ```{r}
-#st_geometry_type(LA_city)
+
 ```
 
 
