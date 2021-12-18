@@ -17,7 +17,8 @@ library(ggplot2)
 library(dplyr) # to filter dataframes
 library(RColorBrewer) # for diverging colour scheme
 library(tidyverse) # for piping
-library(ggmap) #for getting online basemap
+library(ggmap)
+library(leaflet)
 #library(maptools)
 #library(mapproj)
 ```
@@ -31,6 +32,7 @@ LA<-st_read("Geo_Vis_2_Data/LA_County_City_Boundaries/LA_County_City_Boundaries.
 #Check CRS of the LA shapefile
 #st_crs(LA)  # CRS is WGS 84, EPSG 4326
 #View(LA) #opens the 'attribute' table in the Editor window for viewing
+
 
 ```
 
@@ -66,6 +68,12 @@ LAcrime<- LAcrime %>%
 # Use filter from dplyr to select only the City of Los Angeles area
 LA_city <- filter(LA, CITY_LABEL == "Los Angeles")
 ```
+```{r}
+# Transform the shapefile to get lat long coords of the the City of LA boundary using correct WGS84 Geographic proj
+LA_city_coords <- st_transform(LA_city, "+proj=longlat +ellps=WGS84 +datum=WGS84")
+```
+
+
 ```{r}
 # get bounding box coords of LA 
 LA_city.bbox<-st_bbox(LA_city)
@@ -163,15 +171,25 @@ LA_bmap <- get_map(location = c(left = LA_city.bbox[[1]], bottom =LA_city.bbox[[
 
 ```{r}
 # ONLY MAPPING SHOPLIFTING
-ggplot() +   #use the LA OSM basemap
-  geom_sf(data=LA_city) +
+ggmap(LA_bmap) +   #use the LA OSM basemap
+  # 2d kernel density estimation and display result with contours - to prevent overplotting of points
   stat_density_2d(data= filter(LAcrime, Crm.Cd.Desc == "SHOPLIFTING - PETTY THEFT ($950 & UNDER)"),
-                  geom = "polygon", contour = TRUE,
-                  aes(x=LON, y=LAT, fill = after_stat(level)), colour = "black",
+                  geom = "polygon",
+                  contour = TRUE,
+                  aes(x=LON, y=LAT,
+                      fill = after_stat(level),
+                      alpha = 0.5),
+                  colour = "blue",
                   bins = 10) +
   scale_fill_distiller(palette = "RdYlBu", direction = -1) +
+  coord_sf(xlim = c(LA_city.bbox$xmin, LA_city.bbox$xmax),
+           ylim = c(LA_city.bbox$ymin, LA_city.bbox$ymax))
+  geom_sf(data=LA_city, xlim = c(LA_city.bbox$xmin, LA_city.bbox$xmax),
+           ylim = c(LA_city.bbox$ymin, LA_city.bbox$ymax)) +
   theme_void() # no axis 
 ```
+
+## Leaflet Version
 ```{r}
 
 ```
