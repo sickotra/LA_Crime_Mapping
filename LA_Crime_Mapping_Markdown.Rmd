@@ -18,13 +18,11 @@ library(dplyr) # to filter dataframes
 library(RColorBrewer) # for diverging colour scheme
 library(tidyverse) # for piping
 library(ggmap)
-library(ggsn) # for north and scale bar
 library(png) # for inset map
 library(ggpubr) # for multi plots
 library(cowplot) #multiplot
 library(magick) #for adding image
-#library(maptools)
-#library(mapproj)
+
 ```
 
 ## Import the LA Shapefile Data
@@ -193,7 +191,7 @@ map2<- ggmap(LA_bmap) +   #use the LA OSM basemap
        theme(legend.position = "none",
              #legend.title = element_text(size=10, face="bold"),
              #legend.key.size = unit(0.5, "cm"),
-             plot.title = element_text(size=10, face="bold",hjust = 0.5, vjust= 1.5),
+             plot.title = element_text(size=9, face="bold",hjust = 0.5, vjust= 1.5),
               plot.margin = rep(unit(0,"null"),4),
               panel.margin = unit(0,"null"))
         
@@ -224,7 +222,7 @@ map1<- ggplot() +
   theme(legend.position = c(0.10, 0.25),
              legend.title = element_text(size=8),
              legend.key.size = unit(0.3, "cm"),
-             plot.title = element_text(size=10, face="bold",hjust = 0.5, vjust= 1.5),
+             plot.title = element_text(size=9, face="bold",hjust = 0.5, vjust= 1.5),
          plot.margin = rep(unit(0,"null"),4),
         panel.spacing = unit(0,"null"))
 ```
@@ -246,24 +244,29 @@ Map3<-ggarrange(
   map2,
   ncol= 3)
 
-annotate_figure(Map3,
-                top = text_grob("Crime Incidents and Shoplifting Density \nin the City of Los Angeles, California 2020/21", hjust=0.8,face = "bold", size = 14),
-                bottom = text_grob("Crime Data from data.lacity.org and Boundary Data from geohub.lacity.org. Created by Shivani Sickotra, December 2021", hjust=0.8, face = "italic",
-                                   size = 6))
+#annotate_figure(Map3,
+#                top = text_grob("Crime Incidents and Shoplifting Density \nin the City of Los Angeles, California 2020/21", hjust=0.8,face = "bold", size = 14),
+#                bottom = text_grob("Crime Data from data.lacity.org and Boundary Data from geohub.lacity.org. Created by Shivani Sickotra, December 2021", hjust=0.8, face = "italic",
+#                                   size = 6))
 
 ```
 ```{r}
-ggdraw()
-#sets up a new coordinate system running from 0 to 1. This
-# allows you to place an image on top of the plot.
+# Save map as .png with 300dpi resolution 
+png("Crime_Shoplifting_LA.png", units="in", width=10, height=5.5, res=300)
+
 Map4<-ggdraw(Map3) + 
-  draw_image("LA_inset_map.png", scale=0.25, hjust=0.38, vjust=-0.3)
+  draw_image("LA_inset_map.png", scale=0.25, hjust=0.35, vjust=-0.3)
 
 annotate_figure(Map4,
-                top = text_grob("Crime Incidents and Shoplifting Density \nin the City of Los Angeles, California 2020/21", hjust=0.8,face = "bold", size = 14),
-                centre = text_grob("City of LA, CA, USA", size = 8, face="italic"),
-                bottom = text_grob("Crime Data from data.lacity.org and Boundary Data from geohub.lacity.org. Created by Shivani Sickotra, December 2021", hjust=0.8, face = "italic",
+                top = text_grob("Crime Incidents and Shoplifting Density \nin the City of Los Angeles, California 2020/21", hjust=0.75,face = "bold", size = 14),
+                left = text_grob("City of LA, LA County, CA", size = 6, face="italic", vjust=-13, hjust=-2.4),
+                bottom = text_grob("Crime Data from data.lacity.org and Boundary Data from geohub.lacity.org. Created by Shivani Sickotra, December 2021", hjust=0.75, face = "italic",
                                    size = 6))
+
+dev.off()
 ```
+
+## R markdown insert the image made
+
 
 
