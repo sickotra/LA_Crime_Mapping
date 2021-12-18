@@ -18,7 +18,11 @@ library(dplyr) # to filter dataframes
 library(RColorBrewer) # for diverging colour scheme
 library(tidyverse) # for piping
 library(ggmap)
-library(leaflet)
+library(ggsn) # for north and scale bar
+library(png) # for inset map
+library(ggpubr) # for multi plots
+library(cowplot) #multiplot
+library(magick) #for adding image
 #library(maptools)
 #library(mapproj)
 ```
@@ -142,7 +146,16 @@ ggplot() +
 ```{r}
 # Understand the crime categories for the incidents
 # Find all unique values for the Crm.Cd.Desc variable
-unique(LAcrime[c("Crm.Cd.Desc")])   # 12 different categories of crime
+unique(LAcrime[c("Crm.Cd.Desc")])   # 135 different categories of crime
+```
+```{r}
+# Get count of each type of crime 
+LAcrime %>% count(Crm.Cd.Desc, sort = TRUE)
+
+#SHOPLIFTING - PETTY THEFT ($950 & UNDER) = 6197 counts
+# SHOPLIFTING-GRAND THEFT ($950.01 & OVER) = 1093 counts
+# Total Shoplifting  = 7290
+count(filter(LAcrime, Crm.Cd.Desc == "SHOPLIFTING - PETTY THEFT ($950 & UNDER)"))  #Petty theft/shoplifting = 1093
 ```
 
 
@@ -155,30 +168,102 @@ LA_bmap <- get_map(location = c(left = LA_city.bbox[[1]],
                    source="osm")
 ```
 
+
+
 ```{r}
-# ONLY MAPPING SHOPLIFTING
-map1<- ggmap(LA_bmap) +   #use the LA OSM basemap
+# ONLY MAPPING SHOPLIFTING GRAND AND PETTY
+map2<- ggmap(LA_bmap) +   #use the LA OSM basemap
+       
   # 2d kernel density estimation and display result with contours - to prevent overplotting of points
-       stat_density_2d(data= filter(LAcrime, Crm.Cd.Desc == "SHOPLIFTING - PETTY THEFT ($950 & UNDER)"),
+       stat_density_2d(data= filter(LAcrime, Crm.Cd.Desc == "SHOPLIFTING-GRAND THEFT ($950.01 & OVER)" | Crm.Cd.Desc =="SHOPLIFTING - PETTY THEFT ($950 & UNDER)"),
                        geom = "polygon",
                        contour = TRUE,
                        aes(x=LON, y=LAT,
                            fill = after_stat(level)),
                        alpha = 0.4,
                        colour = "darkblue",
-                       bins = 6) +
-       scale_fill_distiller(palette = "RdYlBu", direction = -1) +
-      #no axis
+                       bins= 6) +
+       scale_fill_distiller(palette = "RdYlBu", direction = -1,
+                            breaks = c(10, 15, 20, 25, 30),
+                            labels = c("Low","","Med","","High"),
+                            name = "Density") +
+      #no axis 
        theme_void() +
-       theme(legend.position = c(0.2, 0.05), 
-          legend.direction = "horizontal")
+       ggtitle("Shoplifting Incidents (n = 7290)") +
+       theme(legend.position = "none",
+             #legend.title = element_text(size=10, face="bold"),
+             #legend.key.size = unit(0.5, "cm"),
+             plot.title = element_text(size=10, face="bold",hjust = 0.5, vjust= 1.5),
+              plot.margin = rep(unit(0,"null"),4),
+              panel.margin = unit(0,"null"))
+        
+      
+     
+      
 
-map1
+map2
 ```
-
+# ALL crimes map
 ```{r}
-plot(LA_city)
+# Plot the City of Los Angeles geometry using ggplot
+map1<- ggplot() +
+  geom_sf(data=LA_city) +
+  
+  stat_density_2d(data=LAcrime, geom = "polygon", contour = TRUE,
+                    aes(x=LON, y=LAT, fill = after_stat(level)),
+                  alpha = 0.6,
+                  colour = "darkblue",
+                  
+                    bins = 5) +
+  scale_fill_distiller(palette = "RdYlBu", direction = -1,
+                       breaks = c(20, 30, 40, 50, 60),
+                            labels = c("Low","","Med","","High"),
+                            name = "Density") +
+  theme_void() +
+  ggtitle("All Crime Incidents (n = 387,999)")+
+  theme(legend.position = c(0.10, 0.25),
+             legend.title = element_text(size=8),
+             legend.key.size = unit(0.3, "cm"),
+             plot.title = element_text(size=10, face="bold",hjust = 0.5, vjust= 1.5),
+         plot.margin = rep(unit(0,"null"),4),
+        panel.spacing = unit(0,"null"))
 ```
 
+# Inset map
+```{r}
+# https://nsholmes21.medium.com/the-puzzle-of-places-in-la-18e8a537e3ac
+#inset <- readPNG("Geo_Vis_2_Data/LA_inset_map.png")
+#inset
+
+inset <- image_read("LA_inset_map.png")
+# Resize
+inset<-image_scale(inset, "122x100") # width: 300px
+```
+# Arrange on one page
+```{r}
+Map3<-ggarrange(
+  ggarrange(NULL, map1, nrow = 2, heights=c(0.5,1)),
+  map2,
+  ncol= 3)
+
+annotate_figure(Map3,
+                top = text_grob("Crime Incidents and Shoplifting Density \nin the City of Los Angeles, California 2020/21", hjust=0.8,face = "bold", size = 14),
+                bottom = text_grob("Crime Data from data.lacity.org and Boundary Data from geohub.lacity.org. Created by Shivani Sickotra, December 2021", hjust=0.8, face = "italic",
+                                   size = 6))
+
+```
+```{r}
+ggdraw()
+#sets up a new coordinate system running from 0 to 1. This
+# allows you to place an image on top of the plot.
+Map4<-ggdraw(Map3) + 
+  draw_image("LA_inset_map.png", scale=0.25, hjust=0.38, vjust=-0.3)
+
+annotate_figure(Map4,
+                top = text_grob("Crime Incidents and Shoplifting Density \nin the City of Los Angeles, California 2020/21", hjust=0.8,face = "bold", size = 14),
+                centre = text_grob("City of LA, CA, USA", size = 8, face="italic"),
+                bottom = text_grob("Crime Data from data.lacity.org and Boundary Data from geohub.lacity.org. Created by Shivani Sickotra, December 2021", hjust=0.8, face = "italic",
+                                   size = 6))
+```
 
 
